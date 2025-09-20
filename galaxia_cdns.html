@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Galaxia 3D Funcional</title>
+  <style>
+    body { margin: 0; overflow: hidden; background: black; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+  <!-- Three.js y OrbitControls desde CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/examples/js/controls/OrbitControls.js"></script>
+
+  <script>
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
+    camera.position.set(0, 60, 180);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+
+    // Luces
+    const ambient = new THREE.AmbientLight(0xffffff, 1.0);
+    scene.add(ambient);
+    const point = new THREE.PointLight(0xffffff, 3, 5000);
+    point.position.set(0, 0, 0);
+    scene.add(point);
+
+    // Sol brillante
+    const sunGeo = new THREE.SphereGeometry(15, 32, 32);
+    const sunMat = new THREE.MeshPhongMaterial({ emissive: 0xffcc33, emissiveIntensity: 2 });
+    const sun = new THREE.Mesh(sunGeo, sunMat);
+    scene.add(sun);
+
+    // Estrellas de fondo
+    function addStars() {
+      const starGeo = new THREE.BufferGeometry();
+      const starCount = 3000;
+      const pos = [];
+      for (let i = 0; i < starCount; i++) {
+        pos.push((Math.random() - 0.5) * 4000);
+        pos.push((Math.random() - 0.5) * 4000);
+        pos.push((Math.random() - 0.5) * 4000);
+      }
+      starGeo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+      const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 2 });
+      const stars = new THREE.Points(starGeo, starMat);
+      scene.add(stars);
+    }
+    addStars();
+
+    const frases = ["Eres mi sol","Te quiero","Siempre juntos","Tu sonrisa","Amor infinito","Mi calma","Eres mi universo","Mi razón","Corazón brillante"];
+
+    const planetas = [];
+    function crearPlaneta(radio, distancia, velocidad, color) {
+      const geo = new THREE.SphereGeometry(radio, 32, 32);
+      const mat = new THREE.MeshPhongMaterial({ color, shininess: 80 });
+      const planeta = new THREE.Mesh(geo, mat);
+
+      const grupo = new THREE.Group();
+      grupo.add(planeta);
+      planeta.position.x = distancia;
+      scene.add(grupo);
+
+      frases.forEach((txt, i) => {
+        const sprite = crearTexto(txt);
+        const ang = (i / frases.length) * Math.PI * 2;
+        sprite.position.set(
+          planeta.position.x + Math.cos(ang) * (radio + 15),
+          Math.sin(ang) * 6,
+          Math.sin(ang) * (radio + 15)
+        );
+        grupo.add(sprite);
+      });
+
+      planetas.push({ grupo, planeta, distancia, velocidad, angulo: Math.random() * Math.PI * 2 });
+    }
+
+    function crearTexto(mensaje) {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      ctx.font = "Bold 50px Arial";
+      canvas.width = ctx.measureText(mensaje).width + 40;
+      canvas.height = 80;
+      ctx.font = "Bold 50px Arial";
+      ctx.fillStyle = "pink";
+      ctx.fillText(mensaje, 20, 60);
+      const textura = new THREE.CanvasTexture(canvas);
+      const material = new THREE.SpriteMaterial({ map: textura, transparent: true });
+      const sprite = new THREE.Sprite(material);
+      sprite.scale.set(canvas.width / 10, canvas.height / 10, 1);
+      return sprite;
+    }
+
+    // Crear planetas visibles
+    crearPlaneta(8, 40, 0.02, 0x44aaff);
+    crearPlaneta(10, 70, 0.015, 0xff8844);
+    crearPlaneta(6, 100, 0.012, 0x88ff44);
+    crearPlaneta(12, 140, 0.01, 0xaa44ff);
+    crearPlaneta(9, 180, 0.008, 0xff44aa);
+
+    // Animación
+    function animate() {
+      requestAnimationFrame(animate);
+      planetas.forEach(p => {
+        p.angulo += p.velocidad;
+        p.grupo.position.x = Math.cos(p.angulo) * p.distancia;
+        p.grupo.position.z = Math.sin(p.angulo) * p.distancia;
+        p.planeta.rotation.y += 0.01;
+      });
+      sun.rotation.y += 0.002;
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
